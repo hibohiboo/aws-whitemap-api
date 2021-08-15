@@ -16,26 +16,22 @@ interface Props extends core.StackProps {
 export class AWSWhiteMapAPIStack extends core.Stack {
   constructor(scope: core.Construct, id: string, props: Props) {
     super(scope, id, props)
-    // CloudFront オリジン用のS3バケットを参照
+    // CloudFront オリジン用のS3バケットを参照してバケットへのアクセス権限を持ったIAMを作成
     const bucket = s3.Bucket.fromBucketName(this, props.clientStack.stackName, props.clientStack.bucketName);
     const restApiRole = this.createRestAPIRole(bucket);
+
+    // APIGateway作成
     const restApi = this.createRestAPIGateway(props.apiStack.restApiGatewayName);
+    this.createUsagePlan(restApi, props);
 
-    // apiKeyを設定
-    const apiKey = restApi.addApiKey('defaultKeys');
-    const usagePlan = restApi.addUsagePlan(`${props.apiStack.restApiGatewayName}-usage-plan`);
-    usagePlan.addApiKey(apiKey);
-    usagePlan.addApiStage({ stage: restApi.deploymentStage })
-
-
-    // 画像格納用lambda
+    // 画像格納用 integration
     const backgroundImageIntegration = this.createAwsIntegrationToUploadBucket(
       {
         toUploadBucketPath: `${bucket.bucketName}/data/background-images/{folder}/{object}`,
         restApiRole
       });
 
-    // 音楽格納用lambda
+    // 音楽格納用 integration
     const bgmIntegration = this.createAwsIntegrationToUploadBucket(
       {
         toUploadBucketPath: `${bucket.bucketName}/data/bgms/{folder}/{object}`,
@@ -57,12 +53,6 @@ export class AWSWhiteMapAPIStack extends core.Stack {
     files.addResource('bgms')
       .addResource('{fileName}')
       .addMethod('PUT', bgmIntegration, methodOptions);
-
-    // ------------------------------------------------------------
-    // APIキーのIDを出力
-    new core.CfnOutput(this, 'APIKey', {
-      value: apiKey.keyId
-    })
   }
 
   private createRestAPIRole(bucket: s3.IBucket) {
@@ -91,6 +81,23 @@ export class AWSWhiteMapAPIStack extends core.Stack {
       binaryMediaTypes: ['image/*', 'audio/*'],
     });
     return restApi;
+  }
+
+  private createUsagePlan(restApi: apigateway.RestApi, props: Props) {
+    // apiKeyを設定
+    const apiKey = restApi.addApiKey('defaultKeys');
+    const usagePlan = restApi.addUsagePlan(`${props.apiStack.restApiGatewayName}-usage-plan`,
+      {
+        quota: { limit: 30, period: apigateway.Period.DAY },
+        throttle: { burstLimit: 2, rateLimit: 1 }
+      });
+    usagePlan.addApiKey(apiKey);
+    usagePlan.addApiStage({ stage: restApi.deploymentStage })
+    // ------------------------------------------------------------
+    // APIキーのIDを出力
+    new core.CfnOutput(this, 'APIKey', {
+      value: apiKey.keyId
+    })
   }
 
   private createAwsIntegrationToUploadBucket(prop: {

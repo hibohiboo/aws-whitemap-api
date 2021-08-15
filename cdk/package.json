@@ -1,0 +1,29 @@
+{
+  "name": "cdk",
+  "version": "0.1.0",
+  "bin": {
+    "cdk": "bin/cdk.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk",
+    "bundle": "cdk synth > cdk.out/template.yml",
+    "pipeline-deploy": "cdk deploy --require-approval never",
+    "prod": "cdk deploy --profile produser --require-approval never"
+  },
+  "devDependencies": {
+    "@types/node": "16.6.1",
+    "aws-cdk": "1.118.0",
+    "npm-check-updates": "^11.8.3",
+    "ts-node": "^10.2.0",
+    "typescript": "~4.3.5"
+  },
+  "dependencies": {
+    "@aws-cdk/aws-apigateway": "^1.118.0",
+    "@aws-cdk/aws-iam": "^1.118.0",
+    "@aws-cdk/aws-s3": "^1.118.0",
+    "@aws-cdk/core": "1.118.0",
+    "source-map-support": "^0.5.19"
+  }
+}

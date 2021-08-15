@@ -21,21 +21,35 @@ export class AWSWhiteMapAPIStack extends core.Stack {
     const restApiRole = this.createRestAPIRole(bucket);
     const restApi = this.createRestAPIGateway(props.apiStack.restApiGatewayName)
 
-    const integration = this.createAwsIntegrationToUploadBackgroundImage(
+    // 画像格納用lambda
+    const backgroundImageIntegration = this.createAwsIntegrationToUploadBucket(
       {
         toUploadBucketPath: `${bucket.bucketName}/data/background-images/{folder}/{object}`,
         restApiRole
       });
+
+    // 音楽格納用lambda
+    const bgmIntegration = this.createAwsIntegrationToUploadBucket(
+      {
+        toUploadBucketPath: `${bucket.bucketName}/data/bgms/{folder}/{object}`,
+        restApiRole
+      });
     const methodOptions = this.createMethodOptions();
-    // リソースを作成する `/users/{userId}/files/{fileName}`
+    // リソースを作成する `/users/{userId}/files/background-images/{fileName}`
     const users = restApi.root.addResource('users');
     const userId = users.addResource('{userId}');
     const files = userId.addResource('files');
-    const fileName = files.addResource('{fileName}');
+    const background = files.addResource('background-images');
+
+    const fileName = background.addResource('{fileName}');
 
     // オブジェクトをアップロードするための PUT メソッドを作成する
-    fileName.addMethod('PUT', integration, methodOptions);
+    fileName.addMethod('PUT', backgroundImageIntegration, methodOptions);
 
+    //  `/users/{userId}/files/bgms/{fileName}`
+    files.addResource('bgms')
+      .addResource('{fileName}')
+      .addMethod('PUT', bgmIntegration, methodOptions);
   }
 
   private createRestAPIRole(bucket: s3.IBucket) {
@@ -60,13 +74,13 @@ export class AWSWhiteMapAPIStack extends core.Stack {
         allowMethods: ['POST', 'OPTIONS', 'PUT', 'DELETE'],
         statusCode: 200,
       },
-      // バイナリメディアタイプを設定して、画像を扱えるようする
-      binaryMediaTypes: ['image/*'],
+      // バイナリメディアタイプを設定して、画像、音声を扱えるようにする
+      binaryMediaTypes: ['image/*', 'audio/*'],
     });
     return restApi;
   }
 
-  private createAwsIntegrationToUploadBackgroundImage(prop: {
+  private createAwsIntegrationToUploadBucket(prop: {
     toUploadBucketPath: string
     restApiRole: iam.Role
   }) {

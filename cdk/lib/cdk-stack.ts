@@ -60,6 +60,8 @@ export class AWSWhiteMapAPIStack extends core.Stack {
         allowMethods: ['POST', 'OPTIONS', 'PUT', 'DELETE'],
         statusCode: 200,
       },
+      // バイナリメディアタイプを設定して、画像を扱えるようする
+      binaryMediaTypes: ['image/*'],
     });
     return restApi;
   }
@@ -77,6 +79,8 @@ export class AWSWhiteMapAPIStack extends core.Stack {
         credentialsRole: prop.restApiRole,
         passthroughBehavior: apigateway.PassthroughBehavior.WHEN_NO_MATCH,
         requestParameters: {
+          // メソッドリクエストのヘッダー Content-Type を 統合リクエストのヘッダーにマッピングする
+          'integration.request.header.Content-Type': 'method.request.header.Content-Type',
           // メソッドリクエストのパスパラメータ userId を 統合リクエストのパスパラメータ folder にマッピングする
           'integration.request.path.folder': 'method.request.path.userId',
           // メソッドリクエストのパスパラメータ fileName を 統合リクエストの object にマッピングする
@@ -134,6 +138,7 @@ export class AWSWhiteMapAPIStack extends core.Stack {
     }
     return {
       requestParameters: {
+        'method.request.header.Content-Type': true,
         'method.request.path.userId': true,
         'method.request.path.fileName': true,
       },

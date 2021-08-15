@@ -19,7 +19,14 @@ export class AWSWhiteMapAPIStack extends core.Stack {
     // CloudFront オリジン用のS3バケットを参照
     const bucket = s3.Bucket.fromBucketName(this, props.clientStack.stackName, props.clientStack.bucketName);
     const restApiRole = this.createRestAPIRole(bucket);
-    const restApi = this.createRestAPIGateway(props.apiStack.restApiGatewayName)
+    const restApi = this.createRestAPIGateway(props.apiStack.restApiGatewayName);
+
+    // apiKeyを設定
+    const apiKey = restApi.addApiKey('defaultKeys');
+    const usagePlan = restApi.addUsagePlan(`${props.apiStack.restApiGatewayName}-usage-plan`);
+    usagePlan.addApiKey(apiKey);
+    usagePlan.addApiStage({ stage: restApi.deploymentStage })
+
 
     // 画像格納用lambda
     const backgroundImageIntegration = this.createAwsIntegrationToUploadBucket(
@@ -50,6 +57,12 @@ export class AWSWhiteMapAPIStack extends core.Stack {
     files.addResource('bgms')
       .addResource('{fileName}')
       .addMethod('PUT', bgmIntegration, methodOptions);
+
+    // ------------------------------------------------------------
+    // APIキーのIDを出力
+    new core.CfnOutput(this, 'APIKey', {
+      value: apiKey.keyId
+    })
   }
 
   private createRestAPIRole(bucket: s3.IBucket) {
@@ -151,6 +164,7 @@ export class AWSWhiteMapAPIStack extends core.Stack {
       'method.response.header.Access-Control-Allow-Origin': true,
     }
     return {
+      apiKeyRequired: true,
       requestParameters: {
         'method.request.header.Content-Type': true,
         'method.request.path.userId': true,

@@ -11,7 +11,7 @@ const properties = {
   },
   apiStack: {
     stackName: 'AWSWhiteMapAPIStack',
-    restApiGatewayName: 'aws-whitemap-api'
+    restApiGatewayName: 'aws-whitemap-api',
   }
 }
 new AWSWhiteMapAPIStack(app, properties.apiStack.stackName, properties)

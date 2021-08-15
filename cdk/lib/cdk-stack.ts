@@ -164,3 +164,4 @@ export class AWSWhiteMapAPIStack extends core.Stack {
 
     }
   }
+}
